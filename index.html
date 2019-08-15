@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Ingus Terbets">
+    <title>S&P AI AMA search</title>
+    <!-- Fuse fuzzy search -->
+    <script type="text/javascript" src="vendor/fuse.min.js"></script>
+    <!-- Bootstrap core CSS -->
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!-- tiny bit of formatting CSS-->
+    <link href="style.css" rel="stylesheet">
+    <!-- Github ribon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
+</head>
+
+<body>
+    <a class="github-fork-ribbon" href="https://github.com/ingus-t/SPAI-AMA-search" data-ribbon="Check this on GitHub" title="Check this on GitHub">Check this on GitHub</a>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">S&P AI AMA search</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container">
+
+        <div class="row">
+            <div class="col-sm">
+                <h3>What is this?</h3> This is a tool to search through all of AMA questions (1029 in total right now).
+                <br /> I wanted questions and answers about the course (not related to programming problems) to be in one place, and to be easy to search. The transcript is great, but this seems like a good option for a small ML project.
+                <br /> I simply wanted to make it easier for people who want to find answers.
+                <br /> This is not a perfect solution, but maybe someone finds this helpful :)
+                <br />
+                <b>Notice: Questions and answers are not official, they come from AMA sessions.</b>
+                <br /> Big thank you to <b>Taimur</b> for compiling the AMA transcript.
+                <br /> Feedback is welcome, contact me on S&P AI slack community, <b>&#x40;&#x49;&#x6E;&#x67;&#x75;&#x73;&#x20;&#x54;&#x65;&#x72;&#x62;&#x65;&#x74;&#x73;</b> :)
+                <br /> Main FAQ is located here: <a href="https://sites.google.com/udacity.com/secureprivateai-challenge/faqs/frequently-asked-questions">Secure Private AI challenge FAQ</a>
+                <br />
+            </div>
+            <div class="col-sm justify">
+                <h3>Implemented:</h3>
+                <ul>
+                    <li>Converting AMA transcript to a JSON file</li>
+                    <li>Removed @usernames (first word for names with more than 1 word)</li>
+                    <li>Fuzzy search with adjustable threshold</li>
+                </ul>
+                <h3>To-do</h3> Apply ML:
+                <ul>
+                    <li>to estimate if question has been answered</li>
+                    <li>to match question with the best answer</li>
+					<li>to get better precision than pure text search that is used currently</li>
+                </ul>
+                <h3>Dependencies:</h3>
+                <ul>
+                    <li><a target="_blank" href="https://github.com/krisk/fuse">fuse.js</a></li>
+                    <li>Bootstrap 4.3.1</li>
+                    <li>jQuery 3.4.1</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+            </div>
+            <div class="col-sm">
+
+                <div class="slidecontainer">
+                    The smaller the threshold, the more precise returned results will be. Has to be in range from 0.01 to 1.
+                    <input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+                    <label for="threshold">Error threshold: </label>
+                    <input type="text" id="threshold" disabled/>
+                    <br />
+                </div>
+
+                <label for="searchTextbox">Search term: </label>
+                <input type="text" id="searchTextbox" placeholder="Search query..." />
+                <br />
+                <button type="button" onclick="fuzzy_search()">Search</button>
+            </div>
+            <div class="col-sm">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+                <div id="searchResults"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="vendor/jquery/jquery.slim.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // get a better variable type information for debugging
+        var toType = function(obj) {
+        return "Debugging variable type: " + ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase() + ", " + typeof(obj) + '\n'
+        }
+        
+        // get object size
+        Object.size = function(obj) {
+            var size = 0, key;
+            for (key in obj) {
+                if (obj.hasOwnProperty(key)) size++;
+            }
+            return size;
+        };
+    
+        function render_questions(output)
+        {
+            console.log("---------------------------")
+            console.log("render_questions function started:")
+            output = JSON.parse(output)
+            console.log(toType(output))
+            console.log("Questions found: " + Object.size(output))
+            
+			console.log(JSON.stringify(output))
+			
+            console.log("Answers - starting to render")
+            // clear the old questions and answers
+            document.getElementById('searchResults').innerHTML = " "
+            
+            // add all the new questions and answers
+            for (i = 0; i < output.length; i++) {
+            document.getElementById('searchResults').innerHTML += '<br /><b>' + output[i].question + '</b><br />' + output[i].answer
+            }
+            console.log("Answers - rendering finished")
+        }
+    
+        function fuzzy_search() {
+			// get search parameters
+			var str = document.getElementById('searchTextbox').value
+            var chosen_threshold = document.getElementById('threshold').value
+
+			// Set up our HTTP request
+			var xhr = new XMLHttpRequest();
+			const url='https://protected-cove-92844.herokuapp.com/?searchquery=' + str + '&threshold=' + chosen_threshold;
+			var output = 5;
+			
+			// Setup our listener to process completed requests
+			xhr.onload = function () {
+				// Process our return data
+				if (xhr.status >= 200 && xhr.status < 300) {
+					// Runs when the request is successful
+					output = xhr.responseText;
+					render_questions(output)
+				} else {
+					// Runs when it's not
+					output = xhr.responseText;
+					console.log(output);
+				}
+			};
+
+			// Create and send a GET request
+			// parameters:
+			// 1. post type (GET, POST, PUT, DELETE, etc.)
+			// 2. endpoint URL
+			xhr.open('GET', url);
+			xhr.send();
+        }
+
+        // slider
+        var slider = document.getElementById("myRange");
+        var slide_value = document.getElementById("threshold");
+        slide_value.value = slider.value / 100;
+
+        slider.oninput = function() {
+            slide_value.value = this.value / 100;
+        }
+    </script>
+</body>
+</html>
